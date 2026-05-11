@@ -1,0 +1,80 @@
+# ==============================================================================
+# DocuDecode-UA — Full pipeline requirements
+# Target: Python 3.11, Ubuntu 22.04/24.04, NVIDIA H100 80GB
+#
+# INSTALLATION ORDER MATTERS — use setup.sh, not bare `pip install -r`.
+# See setup.sh for the correct three-step sequence:
+#   1. torch / torchvision / torchaudio  (PyPI unified CUDA wheel)
+#   2. flash-attn                         (needs --no-build-isolation)
+#   3. this file
+#
+# PyTorch packaging note: as of torch 2.9, CUDA-enabled Linux x86_64 wheels
+# ship directly on PyPI (~900 MB). The old --index-url whl trick is no longer
+# required for Linux — just `pip install torch==2.11.0` pulls the CUDA build.
+# ==============================================================================
+
+
+# ── Core Deep Learning Framework ──────────────────────────────────────────────
+# Installed in Step 1 of setup.sh (already satisfied when this file runs).
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
+
+# flash-attn: installed in Step 2 of setup.sh with --no-build-isolation.
+# Pre-built wheels for torch 2.11 + CUDA 12.x available at:
+#   https://github.com/Dao-AILab/flash-attention/releases
+# Accelerates TrOCR's cross-attention and the transformer decoder in RT-DETR.
+flash-attn==2.8.3
+
+
+# ── Document Layout Analysis (RT-DETR via Ultralytics) ────────────────────────
+ultralytics==8.4.48
+
+
+# ── Image Processing ──────────────────────────────────────────────────────────
+# headless variant: no GUI dependencies — correct for a headless H100 server.
+opencv-python-headless==4.13.0.92
+Pillow==12.2.0
+# albumentations 2.x has a revised API vs 1.x (some transform arg names changed).
+albumentations==2.0.8
+
+
+# ── NLP / Transformers — TrOCR fine-tuning on Ukrainian ──────────────────────
+transformers==5.8.0
+datasets==4.8.5
+tokenizers==0.23.1
+accelerate==1.13.0
+evaluate==0.4.6
+huggingface-hub==1.14.0
+safetensors==0.7.0
+# sentencepiece: needed for multilingual tokenisers (Ukrainian BPE vocab)
+sentencepiece==0.2.1
+# timm: provides the ViT backbone weights used by TrOCR's encoder
+timm==1.0.27
+einops==0.8.2
+
+
+# ── Data Handling ─────────────────────────────────────────────────────────────
+numpy==2.4.4
+# pandas 3.x has breaking changes vs 2.x (Copy-on-Write is now always on).
+pandas==3.0.3
+polars==1.40.1
+scipy==1.17.1
+scikit-learn==1.8.0
+# pyarrow: required backend for HuggingFace datasets Arrow caching
+pyarrow==24.0.0
+
+
+# ── Experiment Tracking & Visualisation ──────────────────────────────────────
+wandb==0.26.1
+tensorboard==2.20.0
+matplotlib==3.10.9
+seaborn==0.13.2
+
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+tqdm==4.67.3
+pyyaml==6.0.3
+python-dotenv==1.2.2
+psutil==7.2.2
+packaging==26.2
