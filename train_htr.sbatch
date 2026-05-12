@@ -12,13 +12,13 @@
 # =============================================================================
 
 #SBATCH --job-name=docudecode-htr
-#SBATCH --partition=sharing
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:h100:1
+#SBATCH --gres=gpu:h200:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=80G
-#SBATCH --time=1:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.out
 #SBATCH --error=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.err
 #SBATCH --open-mode=append
@@ -64,12 +64,7 @@ else
     export HTR_RESUME_CHECKPOINT=""
 fi
 
-# ── Run trainer (55-minute budget; auto-resubmit on timeout) ─────────────────
-# timeout cannot wrap a heredoc directly, so write to a temp file first.
-RUNNER=$(mktemp /tmp/htr_runner_XXXXXX.py)
-trap "rm -f $RUNNER" EXIT
-
-cat > "$RUNNER" <<'PYEOF'
+python - <<'PYEOF'
 import os, sys
 sys.path.insert(0, os.environ["PROJECT"] if "PROJECT" in os.environ else ".")
 
@@ -142,17 +137,6 @@ tokenizer.save_pretrained(str(final_dir))
 image_processor.save_pretrained(str(final_dir))
 print(f"Final model saved to {final_dir}")
 PYEOF
-
-timeout 55m python "$RUNNER"
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -eq 124 ]; then
-    echo "55-minute budget reached — resubmitting job"
-    sbatch "$0"
-elif [ $EXIT_CODE -ne 0 ]; then
-    echo "Training exited with code $EXIT_CODE"
-    exit $EXIT_CODE
-fi
 
 echo ""
 echo "====== HTR training finished: $(date) ======"

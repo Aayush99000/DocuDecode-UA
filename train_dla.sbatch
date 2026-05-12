@@ -11,13 +11,13 @@
 # =============================================================================
 
 #SBATCH --job-name=docudecode-dla
-#SBATCH --partition=sharing
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:h100:1
+#SBATCH --gres=gpu:h200:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --time=1:00:00
+#SBATCH --time=8:00:00
 #SBATCH --output=/scratch/katoch.aa/DocuDecode-UA/logs/dla_%j.out
 #SBATCH --error=/scratch/katoch.aa/DocuDecode-UA/logs/dla_%j.err
 #SBATCH --open-mode=append
@@ -68,18 +68,9 @@ if [ ! -f "$PROJECT/dataset/dataset.yaml" ]; then
     python prepare_dataset.py
 fi
 
-# ── Train (55-minute budget; auto-resubmit if time limit hit) ─────────────────
+# ── Train ─────────────────────────────────────────────────────────────────────
 echo "Starting RT-DETR-L training at $(date)"
-timeout 55m python train.py $RESUME_FLAG
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -eq 124 ]; then
-    echo "55-minute budget reached — resubmitting job"
-    sbatch "$0"
-elif [ $EXIT_CODE -ne 0 ]; then
-    echo "Training exited with code $EXIT_CODE"
-    exit $EXIT_CODE
-fi
+python train.py $RESUME_FLAG
 
 echo ""
 echo "====== Training finished: $(date) ======"
