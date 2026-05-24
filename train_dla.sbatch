@@ -26,6 +26,11 @@
 
 set -euo pipefail
 
+# Proxy required for internet access on compute nodes
+export http_proxy=http://10.99.0.130:3128
+export https_proxy=http://10.99.0.130:3128
+export ftp_proxy=http://10.99.0.130:3128
+
 PROJECT=/scratch/katoch.aa/DocuDecode-UA
 ENV_DIR=/scratch/katoch.aa/envs/docudecode
 

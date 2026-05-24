@@ -27,6 +27,11 @@
 
 set -euo pipefail
 
+# Proxy required for internet access on compute nodes
+export http_proxy=http://10.99.0.130:3128
+export https_proxy=http://10.99.0.130:3128
+export ftp_proxy=http://10.99.0.130:3128
+
 PROJECT=/scratch/katoch.aa/DocuDecode-UA
 ENV_DIR=/scratch/katoch.aa/envs/docudecode
 
@@ -47,15 +52,18 @@ source activate "$ENV_DIR"
 # ── CUDA / performance tuning ──────────────────────────────────────────────────
 export CUDA_VISIBLE_DEVICES=0
 export TORCH_ALLOW_TF32=1
-# Disable tokenizer parallelism warnings inside DataLoader workers
 export TOKENIZERS_PARALLELISM=false
+# Use pre-downloaded models from scratch — compute nodes have no internet
+export HF_HOME=/scratch/katoch.aa/hf_cache
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
 
 cd "$PROJECT"
 
 # ── Auto-detect latest HuggingFace Trainer checkpoint ────────────────────────
 # Trainer saves checkpoints as runs/phase3-htr/checkpoint-<step>/.
 # We pass the latest one to trainer.train(resume_from_checkpoint=...).
-RESUME_CKPT=$(ls -dt "$PROJECT/runs/phase3-htr/checkpoint-"* 2>/dev/null | head -1)
+RESUME_CKPT=$(ls -dt "$PROJECT/runs/phase3-htr/checkpoint-"* 2>/dev/null | head -1) || true
 if [ -n "$RESUME_CKPT" ]; then
     echo "Resuming from checkpoint: $RESUME_CKPT"
     export HTR_RESUME_CHECKPOINT="$RESUME_CKPT"
@@ -125,7 +133,7 @@ trainer = Seq2SeqTrainer(
     eval_dataset=eval_dataset,
     data_collator=collator,
     compute_metrics=build_compute_metrics(tokenizer),
-    tokenizer=tokenizer,
+    processing_class=tokenizer,
 )
 
 trainer.train(resume_from_checkpoint=RESUME_CKPT)

@@ -1,11 +1,7 @@
 #!/bin/bash
 # =============================================================================
-# download_data.sbatch — Download RUKOPYS dataset from HuggingFace to scratch
-#
-# Runs inside SLURM so the download survives SSH disconnects.
-# snapshot_download resumes partial downloads automatically (HF Hub caching).
-#
-# Submit:  sbatch download_data.sbatch
+# download_data.sbatch — Download RUKOPYS using pre-generated file list
+# No HF API calls needed — just wget each URL from download_filelist.txt
 # =============================================================================
 
 #SBATCH --job-name=docudecode-download
@@ -22,36 +18,52 @@
 
 set -euo pipefail
 
-PROJECT=/scratch/katoch.aa/DocuDecode-UA
+# Proxy required for internet access on compute nodes
+export http_proxy=http://10.99.0.130:3128
+export https_proxy=http://10.99.0.130:3128
+export ftp_proxy=http://10.99.0.130:3128
+
+LOCAL_DIR=/scratch/katoch.aa/DocuDecode-UA/rukopys_full
+FILELIST=/scratch/katoch.aa/DocuDecode-UA/download_filelist.txt
 
 echo "====== RUKOPYS Dataset Download ======"
 echo "Node : $(hostname)"
+echo "Job  : $SLURM_JOB_ID"
 echo "Time : $(date)"
 echo "======================================"
 
-module purge
-module load python/3.13.5
+# Basic connectivity check — resubmit if no internet
+curl -sf --max-time 10 https://huggingface.co > /dev/null || {
+    echo "No internet on $(hostname) — resubmitting"
+    sbatch "$0"; exit 0
+}
+echo "Internet OK"
 
-python3 - <<'PYEOF'
-from huggingface_hub import snapshot_download
-from pathlib import Path
+mkdir -p "$LOCAL_DIR"
 
-local_dir = Path("/scratch/katoch.aa/DocuDecode-UA/rukopys_full")
-local_dir.mkdir(parents=True, exist_ok=True)
+TOTAL=$(wc -l < "$FILELIST")
+COUNT=0
+SKIP=0
 
-print(f"Downloading UkrainianCatholicUniversity/rukopys → {local_dir}")
-print("(Partial downloads resume automatically)")
+while IFS=$'\t' read -r url relpath; do
+    dest="$LOCAL_DIR/$relpath"
+    mkdir -p "$(dirname "$dest")"
+    COUNT=$((COUNT + 1))
 
-path = snapshot_download(
-    repo_id="UkrainianCatholicUniversity/rukopys",
-    repo_type="dataset",
-    local_dir=str(local_dir),
-    resume_download=True,
-)
-print(f"Download complete: {path}")
-PYEOF
+    if [ -f "$dest" ] && [ -s "$dest" ]; then
+        SKIP=$((SKIP + 1))
+        continue
+    fi
+
+    echo "[$COUNT/$TOTAL] $relpath"
+    wget -q -c -O "$dest" "$url" || {
+        echo "  WARN: failed $relpath — skipping"
+        rm -f "$dest"
+    }
+done < "$FILELIST"
 
 echo ""
 echo "====== Download finished: $(date) ======"
-du -sh "$PROJECT/rukopys_full"
-ls "$PROJECT/rukopys_full"
+echo "Downloaded: $((COUNT - SKIP)) new, skipped: $SKIP existing"
+ls "$LOCAL_DIR"
+du -sh "$LOCAL_DIR"/*/

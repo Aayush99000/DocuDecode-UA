@@ -8,17 +8,18 @@
 #   2. flash-attn                         (needs --no-build-isolation)
 #   3. this file
 #
-# PyTorch packaging note: as of torch 2.9, CUDA-enabled Linux x86_64 wheels
-# ship directly on PyPI (~900 MB). The old --index-url whl trick is no longer
-# required for Linux — just `pip install torch==2.11.0` pulls the CUDA build.
+# PyTorch packaging note: install torch BEFORE this file using the cu124 index
+# to ensure compatibility with CUDA 12.x drivers (cluster max: CUDA 12.8):
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+# torch==2.11.0+cu130 from PyPI requires CUDA 13.0 drivers — not available on Explorer HPC.
 # ==============================================================================
 
 
 # ── Core Deep Learning Framework ──────────────────────────────────────────────
-# Installed in Step 1 of setup.sh (already satisfied when this file runs).
-torch==2.11.0
-torchvision==0.26.0
-torchaudio==2.11.0
+# Installed separately via cu124 index (see note above). Listed here for reference only.
+# torch
+# torchvision
+# torchaudio
 
 # flash-attn: installed in Step 2 of setup.sh with --no-build-isolation.
 # Pre-built wheels for torch 2.11 + CUDA 12.x available at:
