@@ -581,10 +581,10 @@ def get_training_args(
 
         # ── Evaluation & checkpointing ─────────────────────────────────────
         eval_strategy="steps",
-        eval_steps=500,
+        eval_steps=200,
         save_strategy="steps",
-        save_steps=500,
-        save_total_limit=3,
+        save_steps=200,
+        save_total_limit=5,
         load_best_model_at_end=True,
         metric_for_best_model="cer",
         greater_is_better=False,    # lower CER = better model

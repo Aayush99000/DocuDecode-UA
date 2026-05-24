@@ -12,13 +12,13 @@
 # =============================================================================
 
 #SBATCH --job-name=docudecode-htr
-#SBATCH --partition=gpu
+#SBATCH --partition=sharing
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:h200:1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
-#SBATCH --time=8:00:00
+#SBATCH --gres=gpu:l40:1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --time=1:00:00
 #SBATCH --output=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.out
 #SBATCH --error=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.err
 #SBATCH --open-mode=append
@@ -159,4 +159,15 @@ print(f"Final model saved to {final_dir}")
 PYEOF
 
 echo ""
-echo "====== HTR training finished: $(date) ======"
+echo "====== HTR job finished: $(date) ======"
+
+# Auto-resubmit if a checkpoint exists but no final model yet — keeps training
+# across 1-hour sharing-partition slots without manual intervention.
+FINAL_DIR="$PROJECT/runs/phase3-htr/final"
+HAS_CKPT=$(ls -d "$PROJECT/runs/phase3-htr/checkpoint-"* 2>/dev/null | head -1)
+if [ -n "$HAS_CKPT" ] && [ ! -d "$FINAL_DIR" ]; then
+    echo "Checkpoint found; no final model yet — auto-resubmitting …"
+    sbatch "$PROJECT/train_htr.sbatch"
+else
+    echo "Training complete (final model exists) or no checkpoint to resume from."
+fi
