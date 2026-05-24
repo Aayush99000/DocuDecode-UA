@@ -17,7 +17,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:h200:1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=80G
+#SBATCH --mem=128G
 #SBATCH --time=8:00:00
 #SBATCH --output=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.out
 #SBATCH --error=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.err
@@ -73,7 +73,13 @@ else
 fi
 
 python - <<'PYEOF'
-import os, sys
+import os, sys, signal, traceback as _tb
+
+def _sigterm_handler(signum, frame):
+    print(f"\n[SLURM] Received signal {signum} — likely OOM or time-limit kill", flush=True)
+    sys.exit(signum)
+signal.signal(signal.SIGTERM, _sigterm_handler)
+
 sys.path.insert(0, os.environ["PROJECT"] if "PROJECT" in os.environ else ".")
 
 from phase3_htr import (
@@ -136,7 +142,13 @@ trainer = Seq2SeqTrainer(
     processing_class=tokenizer,
 )
 
-trainer.train(resume_from_checkpoint=RESUME_CKPT)
+try:
+    print("Starting trainer.train() …", flush=True)
+    trainer.train(resume_from_checkpoint=RESUME_CKPT)
+except Exception as exc:
+    print(f"\n[FATAL] trainer.train() raised: {exc}", flush=True)
+    print(_tb.format_exc(), flush=True)
+    sys.exit(1)
 
 # ── Save final artefacts ──────────────────────────────────────────────────────
 final_dir = OUTPUT_DIR / "final"

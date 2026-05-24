@@ -557,7 +557,7 @@ def get_training_args(
         # ── Optimiser ─────────────────────────────────────────────────────
         learning_rate=learning_rate,
         weight_decay=0.01,
-        warmup_ratio=0.06,          # 6 % warm-up then cosine decay
+        warmup_steps=1000,          # ~6 % of 50-epoch training
         lr_scheduler_type="cosine",
         # adamw_torch_fused uses CUDA-fused kernels for AdamW momentum /
         # variance updates — measurably faster than the default on H100.
@@ -590,12 +590,12 @@ def get_training_args(
         greater_is_better=False,    # lower CER = better model
 
         # ── Logging ───────────────────────────────────────────────────────
-        logging_dir=str(Path(output_dir) / "logs"),
         logging_steps=50,
         report_to=report_to,
 
         # ── Data loading ──────────────────────────────────────────────────
-        dataloader_num_workers=8,
+        # 4 workers: fewer forked processes = lower peak CPU RAM at startup
+        dataloader_num_workers=4,
         dataloader_pin_memory=True,
 
         # ── Reproducibility ───────────────────────────────────────────────
@@ -613,8 +613,7 @@ def train(
     train_pairs: list[OcrPair],
     eval_pairs: list[OcrPair],
     output_dir: str | Path,
-    encoder_model: str = ENCODER_MODEL,
-    decoder_model: str = DECODER_MODEL,
+    base_model: str = BASE_MODEL,
     **training_kwargs,
 ) -> Seq2SeqTrainer:
     """End-to-end training function.
@@ -628,8 +627,8 @@ def train(
         ``(crop_path, text)`` lists for training and validation respectively.
     output_dir:
         Root directory for checkpoints, logs, and the final model artefacts.
-    encoder_model, decoder_model:
-        Model identifiers forwarded to :func:`init_model_and_tokenizer`.
+    base_model:
+        Model identifier forwarded to :func:`init_model_and_tokenizer`.
     **training_kwargs:
         Extra keyword arguments forwarded to :func:`get_training_args`
         (e.g. ``num_train_epochs``, ``per_device_train_batch_size``).
@@ -643,8 +642,7 @@ def train(
 
     # ── Model, tokenizer, processor ───────────────────────────────────────
     model, tokenizer, image_processor = init_model_and_tokenizer(
-        encoder_model=encoder_model,
-        decoder_model=decoder_model,
+        base_model=base_model,
     )
 
     # ── Datasets ──────────────────────────────────────────────────────────
