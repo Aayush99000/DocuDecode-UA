@@ -563,10 +563,10 @@ def get_training_args(
         # variance updates — measurably faster than the default on H100.
         optim="adamw_torch_fused",
 
-        # ── H100 precision ───────────────────────────────────────────────
-        bf16=True,
-        fp16=False,                 # bf16 and fp16 are mutually exclusive
-        tf32=True,
+        # ── Precision: fp16 for V100 (no BF16 support on Volta) ──────────
+        bf16=False,
+        fp16=True,
+        tf32=False,                 # TF32 is Ampere+ only
 
         # ── Memory ────────────────────────────────────────────────────────
         gradient_checkpointing=True,

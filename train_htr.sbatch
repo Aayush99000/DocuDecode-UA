@@ -15,7 +15,7 @@
 #SBATCH --partition=sharing
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:l40:1
+#SBATCH --gres=gpu:v100-sxm2:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=1:00:00
@@ -131,7 +131,13 @@ eval_dataset  = RukopysDataset(val_pairs,   image_processor, tokenizer)
 collator      = ImageTextDataCollator(tokenizer=tokenizer)
 
 # ── Trainer ───────────────────────────────────────────────────────────────────
-training_args = get_training_args(OUTPUT_DIR)
+# V100 has 32GB VRAM — use batch 8 + accum 4 = eff. 32 (same as before)
+training_args = get_training_args(
+    OUTPUT_DIR,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=16,
+    gradient_accumulation_steps=4,
+)
 trainer = Seq2SeqTrainer(
     model=model,
     args=training_args,
