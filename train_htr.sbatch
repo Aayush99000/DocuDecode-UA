@@ -12,13 +12,13 @@
 # =============================================================================
 
 #SBATCH --job-name=docudecode-htr
-#SBATCH --partition=lowpriority
+#SBATCH --partition=sharing
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:v100-sxm2:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=23:00:00
+#SBATCH --time=1:00:00
 #SBATCH --output=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.out
 #SBATCH --error=/scratch/katoch.aa/DocuDecode-UA/logs/htr_%j.err
 #SBATCH --open-mode=append
